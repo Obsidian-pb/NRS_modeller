@@ -485,6 +485,7 @@ class NRS_Model(object):
             for i in range(iters):
                 for elmnt in self.elmnts_in:
                     elmnt.set_H_in(elmnt.H_in)
+                    # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
@@ -508,11 +509,12 @@ class NRS_Model(object):
         if accuracy>0:
             i=0
             # print(Q)
-            while abs(Q[2]-Q[1])>accuracy:
+            while abs(Q[2]-Q[1])>accuracy:      # and not Q[2]==Q[1]:
                 # print(i)
                 # print(Q)
                 for elmnt in self.elmnts_in:
                     elmnt.set_H_in(elmnt.H_in)
+                    # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
