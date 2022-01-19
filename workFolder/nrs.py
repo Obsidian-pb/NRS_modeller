@@ -509,7 +509,8 @@ class NRS_Model(object):
         if accuracy>0:
             i=0
             # print(Q)
-            while abs(Q[2]-Q[1])>accuracy:      # and not Q[2]==Q[1]:
+            # while abs(Q[2]-Q[1])>accuracy:      # and not Q[2]==Q[1]:
+            while abs(Q[2]-Q[1])>accuracy or Q[2]==Q[1]:                
                 # print(i)
                 # print(Q)
                 for elmnt in self.elmnts_in:
