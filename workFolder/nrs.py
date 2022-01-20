@@ -466,13 +466,14 @@ class NRS_Model(object):
             elmnt.observerInit()
         return self
 
-    def calc(self, iters=1, callback=None, accuracy=0):
+    def calc(self, iters=1, callback=None, accuracy=0, fixStates=True):
         '''
         Рассчитывает модель
             Вход:
                 iters - количество циклов расчета, ед. По умолчанию iters=1 \n
                 callback - функция вызываемая по окончании каждой итерации. По умолчанию callback=None \n
-                accuracy=0:float - точность расчета НРС. Если точность не равна 0, то модель будет рассчитываться до тех пор, пока не будет достигнута указанная точность.
+                accuracy=0:float - точность расчета НРС. Если точность не равна 0, то модель будет рассчитываться до тех пор, пока не будет достигнута указанная точность. \n
+                fixStates=True:Bool - фиксировать ли состояния модели при расчете
             Выход:
                 NRS_Model - ссылка на текущий экземпляр модели\n
                 int - количество итераций потребовавшихся для достижения необходимой точности расчета (при accuracy>0)
@@ -490,8 +491,10 @@ class NRS_Model(object):
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
                     elmnt.set_q(elmnt.get_q_out())
-                for elmnt in self.elmnts:
-                    elmnt.fixState()
+                if fixStates:
+                    self.fixState()
+                    # for elmnt in self.elmnts:
+                    #     elmnt.fixState()
                 if callback:
                     callback(self)
 
@@ -520,8 +523,10 @@ class NRS_Model(object):
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
                     elmnt.set_q(elmnt.get_q_out())
-                for elmnt in self.elmnts:
-                    elmnt.fixState()
+                if fixStates:
+                    self.fixState()
+                    # for elmnt in self.elmnts:
+                    #     elmnt.fixState()
                 if callback:
                     callback(self)
 
@@ -548,6 +553,13 @@ class NRS_Model(object):
                 float: суммарный расход модели, л/с
         '''
         return sum([elmnt.get_q_out() for elmnt in self.elmnts_out])
+
+    def fixState(self):
+        '''
+        Фиксирует состояние параметров элементов модели
+        '''
+        for elmnt in self.elmnts:
+            elmnt.fixState()
 
 
 class NRS_Data(object):
