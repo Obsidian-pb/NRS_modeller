@@ -1,5 +1,4 @@
 #%%
-# from telnetlib import DO
 
 
 class NRS_Revision(object):
@@ -32,19 +31,27 @@ class NRS_Revision(object):
         print(','.join(elmnts))
 
     @staticmethod
-    def print_element_state(elmnt):
+    def print_element_state(elmnt, e_keys=None):
         '''
         Печать всех значений параметров elmnt
             Вход:
-                elmnt: Element. Элемент НРС для которого следует вывести перечень параметров
+                `elmnt`: Element 
+                    Element. Элемент НРС для которого следует вывести перечень параметров
+                `e_keys`: None | list
+                    Список параметров которые следует распечатать. Если не указан, печатаются все.
         '''
-        e_keys = list(elmnt.__dict__.keys())
+        if e_keys is None:
+            e_keys = list(elmnt.__dict__.keys())
+
         for i in e_keys:
-            v = elmnt.__dict__[i]
             try:
-                print(i + ": " + str(v))
-            except:
-                print(i + ": не строчный тип")
+                v = elmnt.__dict__[i]
+                try:
+                    print(i + ": " + str(v))
+                except:
+                    print(i + ": не строчный тип")
+            except KeyError:
+                print(f'Параметр {i} не существует.')
 
     @staticmethod
     def calc_p(q, H):      
@@ -320,6 +327,7 @@ class Element(object):
         self.q=0
         for elmnt in self.elements_previous:
             elmnt.set_q_zero()
+            print('Возможно здесь можно добавить учет изменения напоров на насосах при расчете')
 
     def set_q(self, q):
         '''
@@ -517,7 +525,7 @@ class NRS_Model(object):
                 # print(i)
                 # print(Q)
                 for elmnt in self.elmnts_in:
-                    elmnt.set_H_in(elmnt.H_in)
+                    elmnt.set_H_in(elmnt.H_in)      
                     # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
