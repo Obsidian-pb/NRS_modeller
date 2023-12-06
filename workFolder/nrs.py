@@ -165,7 +165,7 @@ class Element(object):
     Класс элемента НРС.
     '''
 
-    def __init__(self, name, e_type, q=3.7, s=0, H_in=0, h=0, H_add=0, z=0, p=1, n=1,
+    def __init__(self, name, e_type, q=3.7, s=0, H_in=0, h=0, H_add=0, z=0, p=1, n=1, l=0,
                  q_out = q_out_simple):
         '''
         # Аргументы
@@ -189,6 +189,8 @@ class Element(object):
 
             `n`=1: количество единиц элемента. Например, количество рукавов в рукавной линии
 
+            `l`=0: Длина единицы элемента. По умолчанию предполагается, что все элементы - точечные, т.е не имеют длины
+
             `q_out` = q_out_simple: функция расчета расхода на выходе из элемента
         '''
         self.elements_next=[]
@@ -208,6 +210,7 @@ class Element(object):
         self.q_out=q_out
         self.H_add=H_add
         self.observer=None
+        self.l = l
         # self.h=0
 
     def append(self, elmnt):
@@ -270,7 +273,7 @@ class Element(object):
                 float: текущее значение потери напора для данного элемента. 
                 Равно S*n*q^2
         '''
-        self.h=self.s*self.n*self.q**2 
+        self.h = self.s * self.n * self.q**2 
         return self.h
 
     def get_H_out(self):
@@ -303,6 +306,13 @@ class Element(object):
         # for elmnt in self.elements_next:
         #     elmnt.set_H_in(self.get_H_out())        
 
+    def get_L(self):
+        '''
+        Возвращает длину элемента
+        '''
+        self.L = self.n * self.l
+        return self.L
+
     # Рекурсивная установка значений
     def set_H_in(self, H_in):
         '''
@@ -327,7 +337,6 @@ class Element(object):
         self.q=0
         for elmnt in self.elements_previous:
             elmnt.set_q_zero()
-            print('Возможно здесь можно добавить учет изменения напоров на насосах при расчете')
 
     def set_q(self, q):
         '''
@@ -342,6 +351,9 @@ class Element(object):
         self.q+=q
         for elmnt in self.elements_previous:
             elmnt.set_q(q/len(self.elements_previous))
+            # Тут нужно разобраться
+            # if elmnt.type == 0:
+            #     elmnt.H_add = self.h + self.H_in
 
 class NRS_Model(object):
     '''
@@ -396,6 +408,22 @@ class NRS_Model(object):
             #         self.elmnts_out.append(elmnt)
 
         return self
+
+    def getElement(self, name):
+        '''
+        Возвращает элемент модели с указанным name. 
+        Если элемент не найден, возвращается None.
+
+        # Вход
+
+        `name`
+            Имя элемента
+        '''
+        for elmnt in self.elmnts:
+            if name == elmnt.name:
+                return elmnt
+        return None
+
 
     def interpretate(self):
         '''
@@ -494,7 +522,7 @@ class NRS_Model(object):
             for i in range(iters):
                 for elmnt in self.elmnts_in:
                     elmnt.set_H_in(elmnt.H_in)
-                    # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
+                    # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)  elmnt.H_add = self.h + self.H_in
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
@@ -557,8 +585,10 @@ class NRS_Model(object):
     def summaryQ(self):
         '''
         Возвращает общий расход модели
-            Выход:
-                float: суммарный расход модели, л/с
+        
+        # Выход
+        
+        `float`: суммарный расход модели, л/с
         '''
         return sum([elmnt.get_q_out() for elmnt in self.elmnts_out])
 
