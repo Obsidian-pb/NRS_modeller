@@ -1,4 +1,6 @@
 #%%
+import logging
+logger = logging.getLogger('NRS')
 
 
 class NRS_Revision(object):
@@ -78,6 +80,28 @@ class NRS_Revision(object):
         print("out:")
         for elmnt in model.elmnts_out:
             print("  " + elmnt.name)
+
+    @staticmethod
+    def get_element_by_name(elements_list, name, return_id_in_list=True):
+        '''
+        Возвращает элемент модели с указанным name. 
+        Если элемент не найден, возвращается None.
+
+        # Вход
+
+        `elements_list`
+            Список элементов
+
+        `name`
+            Имя элемента
+        '''
+        for i, elmnt in enumerate(elements_list):
+            if elmnt.name == name:
+                if return_id_in_list:
+                    return i
+                else:
+                    return elmnt
+        return None
 
 #=======================Класс наблюдателя================================
 class NRS_Observer_E(object):
@@ -165,7 +189,7 @@ class Element(object):
     Класс элемента НРС.
     '''
 
-    def __init__(self, name, e_type, q=3.7, s=0, H_in=0, h=0, H_add=0, z=0, p=1, n=1, l=0,
+    def __init__(self, name, e_type, q=3.7, s=0, H_in=0, h=0, H_add=0, z=0, p=1, n=1, l=0, ri=1, ro=1,
                  q_out = q_out_simple):
         '''
         # Аргументы
@@ -189,7 +213,9 @@ class Element(object):
 
             `n`=1: количество единиц элемента. Например, количество рукавов в рукавной линии
 
-            `l`=0: Длина единицы элемента. По умолчанию предполагается, что все элементы - точечные, т.е не имеют длины
+            `l`=0: длина единицы элемента. По умолчанию предполагается, что все элементы - точечные, т.е не имеют длины
+
+            `ri`=1, `ro`=1: количество входов и выходов соответственно
 
             `q_out` = q_out_simple: функция расчета расхода на выходе из элемента
         '''
@@ -198,7 +224,7 @@ class Element(object):
 
         self.type = e_type
         self.name = name
-        print("Новый элемент НРС: " + self.name)
+        # print("Новый элемент НРС: " + self.name)
 
         self.q =q
         self.s=s
@@ -211,6 +237,8 @@ class Element(object):
         self.H_add=H_add
         self.observer=None
         self.l = l
+        self.ri = ri
+        self.ro = ro
         # self.h=0
 
     def append(self, elmnt):
@@ -221,8 +249,16 @@ class Element(object):
             Выход:
                 ссылка на текущий элемент
         '''
-        self.elements_next.append(elmnt)
-        elmnt.elements_previous.append(self)
+        # если имеется возможность подключения дополнительного элемента у текущего элемента
+        if self.ro>len(self.elements_next):
+            # Если у переданного элемента имеется возможность подключения дополнительного эл-та:
+            if elmnt.ri>len(elmnt.elements_previous):
+                self.elements_next.append(elmnt)
+                elmnt.elements_previous.append(self)
+            else:
+                logger.debug(f'У элемента {elmnt.name} нет дополнительных входов для подключения {self.name}')
+        else:
+            logger.debug(f'У элемента {self.name} нет дополнительных выходов для подключения {elmnt.name}')
         return elmnt
 
     def addToModel(self, model):
@@ -374,6 +410,7 @@ class NRS_Model(object):
         self.elmnts=[]
         self.elmnts_in=[]
         self.elmnts_out=[]
+        self.counter=0
         print("Новая модель: " + self.name)
 
     def appendElement(self, elmnt):
@@ -384,7 +421,19 @@ class NRS_Model(object):
             Выход:
                 NRS_Model: ссылка на текущую модель
         '''
+        self.counter+=1
+        if elmnt.name=='':
+            elmnt.name=str(self.counter)
+        logger.info("Новый элемент НРС: " + elmnt.name)
+        
+        # добавление в основной список
         self.elmnts.append(elmnt)
+        # # Добавление в дополнительные списки
+        # if elmnt.type==0:
+        #     self.elmnts_in.append(elmnt)
+        # elif elmnt.type==2:
+        #     self.elmnts_out.append(elmnt)
+
         return self
 
     def addElements(self, elmnts, interpretate=False):
@@ -393,19 +442,16 @@ class NRS_Model(object):
             Вход:
                 elmnts=List(Element): Список элементов для добавления в модель НРС
                 interpretate=False: Если равно True, происходит автоматическая интерпретация 
-                (распределеине по спискам входящих и выходящих элементов)
+                (распределение по спискам входящих и выходящих элементов)
                 элементов модели
             Выход:
                 NRS_Model: ссылка на текущую модель
         '''
-        self.elmnts=elmnts
+        for elmnt in elmnts:
+            if not elmnt in self.elmnts:
+                self.appendElement(elmnt)
         if interpretate:
             self.interpretate()
-            # for elmnt in self.elmnts:
-            #     if elmnt.type==0:
-            #         self.elmnts_in.append(elmnt)
-            #     elif elmnt.type==2:            
-            #         self.elmnts_out.append(elmnt)
 
         return self
 
@@ -434,11 +480,22 @@ class NRS_Model(object):
                 NRS_Model: ссылка на текущую модель
         '''
         for elmnt in self.elmnts:
-            if elmnt.type==0:
+            if elmnt.type==0 and not elmnt in self.elmnts_in:
                 self.elmnts_in.append(elmnt)
-            elif elmnt.type==2:            
-                self.elmnts_out.append(elmnt)     
-        return self    
+            elif elmnt.type==2 and not elmnt in self.elmnts_out:
+                self.elmnts_out.append(elmnt)
+        # logger.warning("Функция `interpretate` устарела и в будущем будет удалена. Ее использование настоятельно не рекомендуется!")
+        return self
+
+    def clear(self):
+        '''
+        Очистка списков элементов
+        '''
+        self.elmnts=[]
+        self.elmnts_in=[]
+        self.elmnts_out=[]
+        self.counter=0
+        return self
 
     def addElementsIn(self, elmnts):
         '''
@@ -486,7 +543,7 @@ class NRS_Model(object):
                 Далее _elementAdd будет вызвана для всех подключенных к нему элементов
         '''
         if not elmnt in self.elmnts:
-            self.elmnts.append(elmnt)
+            self.appendElement(elmnt)
             for linked in elmnt.elements_next:
                 self._elementAdd(linked)
             for linked in elmnt.elements_previous:
@@ -574,7 +631,7 @@ class NRS_Model(object):
                 QD_1=abs(Q[1]-Q[0])
                 QD_2=abs(Q[2]-Q[1])
                 if QD_1<QD_2:
-                    print("Расчет НРС не возможен")
+                    logger.debug("Расчет НРС не возможен")
                 
                 i+=1
 
