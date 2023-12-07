@@ -301,6 +301,21 @@ class Element(object):
             return self.observer.par_dict_init()
         return self
 
+    def drop_links(self, linked_elements=False):
+        '''
+        Очистка связей элемента
+        '''
+        if linked_elements:
+            for elmnt_next in self.elements_next:
+                eid = NRS_Revision.get_element_by_name(elmnt_next.elements_previous, self.name)
+                del elmnt_next.elements_previous[eid]
+            for elmnt_prev in self.elements_previous:
+                eid = NRS_Revision.get_element_by_name(elmnt_prev.elements_next, self.name)
+                del elmnt_prev.elements_next[eid]
+
+        self.elements_next=[]
+        self.elements_previous=[]
+
     # Прямая установка значений
     def get_h(self):
         '''
