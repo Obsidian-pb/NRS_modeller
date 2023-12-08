@@ -63,10 +63,34 @@ class NRS_Revision(object):
                 q - производительность ствола\n
                 H - напор при котором ствол имеет производительность q\n
             Пример:
-                calc_p(3.7, 40)\n
-                >>>0.5850213671311502\n
+                ```
+                calc_p(3.7, 40)
+                >>>0.5850213671311502
+                ```
         '''
         return q/pow(H, 0.5)
+    
+    @staticmethod
+    def calc_h(n,s,q):
+        '''
+        Функция возвращает потерю напора:
+
+        # Вход
+
+        n - количество рукавов
+
+        s - гидравлическое сопротивление 1 пожарного рукава
+
+        q - Расход воды через сечение рукава
+
+        # Пример
+            ```
+            calc_h(6, 0.13, 7.4)
+            >>>42.71280000000001
+            ```
+        '''
+        return n*s*(q**2)
+
 
     @staticmethod
     def print_model_elements(model):
@@ -586,7 +610,8 @@ class NRS_Model(object):
                 NRS_Model - ссылка на текущий экземпляр модели\n
                 int - количество итераций потребовавшихся для достижения необходимой точности расчета (при accuracy>0)
         '''
-        Q=[0, 0, self.summaryQ()]
+        # Q=[0, 0, self.summaryQ()]
+        Q=[100000, 10000, 1000]
         # print(Q)
         if accuracy==0:
             # if iters>=3:
@@ -621,7 +646,7 @@ class NRS_Model(object):
             i=0
             # print(Q)
             # while abs(Q[2]-Q[1])>accuracy:      # and not Q[2]==Q[1]:
-            while abs(Q[2]-Q[1])>accuracy or Q[2]==Q[1]:                
+            while abs(Q[2]-Q[1])<accuracy or Q[2]==Q[1]:
                 # print(i)
                 # print(Q)
                 for elmnt in self.elmnts_in:
@@ -646,13 +671,18 @@ class NRS_Model(object):
                 QD_1=abs(Q[1]-Q[0])
                 QD_2=abs(Q[2]-Q[1])
                 if QD_1<QD_2:
-                    logger.debug("Расчет НРС не возможен")
-                
+                    # logger.debug("Расчет НРС не возможен")
+                    print('Невязки', Q, QD_1, QD_2)
+                    raise ValueError("НРС с заданными параметрами не работоспособна")
+
                 i+=1
 
-            return self, i
+            # QD_2 - QD_1 - невязка модели
+            QD_1=abs(Q[1]-Q[0])
+            QD_2=abs(Q[2]-Q[1])
+            return self, i, QD_2 - QD_1
 
-        return self
+        return self, QD_2 - QD_1
 
     def summaryQ(self):
         '''
@@ -663,6 +693,14 @@ class NRS_Model(object):
         `float`: суммарный расход модели, л/с
         '''
         return sum([elmnt.get_q_out() for elmnt in self.elmnts_out])
+    
+    def drop_q(self):
+        '''
+        Сбрасывает все текущие расходы элементов. 
+        Предназначена для возможности повторного расчета модели.
+        '''
+        for elmnt in self.elmnts:
+            elmnt.q = 0
 
     def fixState(self):
         '''
