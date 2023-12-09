@@ -325,20 +325,50 @@ class Element(object):
             return self.observer.par_dict_init()
         return self
 
-    def drop_links(self, linked_elements=False):
+    def drop_links(self, linked_elements=False, current_element=True):
         '''
         Очистка связей элемента
         '''
         if linked_elements:
             for elmnt_next in self.elements_next:
-                eid = NRS_Revision.get_element_by_name(elmnt_next.elements_previous, self.name)
-                del elmnt_next.elements_previous[eid]
+                # eid = NRS_Revision.get_element_by_name(elmnt_next.elements_previous, self.name)
+                # del elmnt_next.elements_previous[eid]
+                if self in elmnt_next.elements_previous:
+                    elmnt_next.elements_previous.remove(self)
             for elmnt_prev in self.elements_previous:
-                eid = NRS_Revision.get_element_by_name(elmnt_prev.elements_next, self.name)
-                del elmnt_prev.elements_next[eid]
+                # eid = NRS_Revision.get_element_by_name(elmnt_prev.elements_next, self.name)
+                # del elmnt_prev.elements_next[eid]
+                if self in elmnt_prev.elements_next:
+                    elmnt_prev.elements_next.remove(self)
 
-        self.elements_next=[]
-        self.elements_previous=[]
+        if current_element:
+            self.elements_next=[]
+            self.elements_previous=[]
+
+    def set_ri(self, new_val):
+        '''
+        Установка количества входных патрубков.
+        Если в данный момент к элементу подключено больше элементов на вход, чем новое ri, то лишние отбрасываются.
+        '''
+        self.ri = new_val
+        if self.ri<len(self.elements_previous):
+            num_to_drop=len(self.elements_previous)-self.ri
+            for _ in range(num_to_drop):
+                pe = self.elements_previous.pop(0)
+                pe.elements_next.remove(self)
+
+    def set_ro(self, new_val):
+        '''
+        Установка количества выходных патрубков.
+        Если в данный момент к элементу подключено больше элементов на выход, чем новое ro, то лишние отбрасываются.
+        '''
+        self.ro = new_val
+        if self.ro<len(self.elements_next):
+            num_to_drop=len(self.elements_next)-self.ro
+            for _ in range(num_to_drop):
+                pe = self.elements_next.pop(0)
+                pe.elements_previous.remove(self)
+
 
     # Прямая установка значений
     def get_h(self):
@@ -493,6 +523,18 @@ class NRS_Model(object):
             self.interpretate()
 
         return self
+    
+    def delElement(self, elmnt:Element):
+        '''
+        Удаляем элемент как объект
+        '''
+        elmnt.drop_links(True)
+        if elmnt in self.elmnts:
+            self.elmnts.remove(elmnt)
+        if elmnt in self.elmnts_in:
+            self.elmnts_in.remove(elmnt)
+        if elmnt in self.elmnts_out:
+            self.elmnts_out.remove(elmnt)
 
     def getElement(self, name):
         '''
@@ -610,7 +652,7 @@ class NRS_Model(object):
                 NRS_Model - ссылка на текущий экземпляр модели\n
                 int - количество итераций потребовавшихся для достижения необходимой точности расчета (при accuracy>0)
         '''
-        # Q=[0, 0, self.summaryQ()]
+        # Q=[10000, 1000, self.summaryQ()]
         Q=[100000, 10000, 1000]
         # print(Q)
         if accuracy==0:
@@ -644,11 +686,11 @@ class NRS_Model(object):
 
         if accuracy>0:
             i=0
-            # print(Q)
+            # print('до', Q)
             # while abs(Q[2]-Q[1])>accuracy:      # and not Q[2]==Q[1]:
-            while abs(Q[2]-Q[1])<accuracy or Q[2]==Q[1]:
+            while abs(Q[2]-Q[1])>accuracy and Q[2]!=Q[1]:
                 # print(i)
-                # print(Q)
+                # print('0', Q)
                 for elmnt in self.elmnts_in:
                     elmnt.set_H_in(elmnt.H_in)      
                     # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
@@ -667,12 +709,12 @@ class NRS_Model(object):
                 Q[0]=Q[1]
                 Q[1]=Q[2]
                 Q[2]=self.summaryQ()
-                # print(Q)
+                # print('1', Q)
                 QD_1=abs(Q[1]-Q[0])
                 QD_2=abs(Q[2]-Q[1])
                 if QD_1<QD_2:
                     # logger.debug("Расчет НРС не возможен")
-                    print('Невязки', Q, QD_1, QD_2)
+                    # print('Невязки', Q, QD_1, QD_2)
                     raise ValueError("НРС с заданными параметрами не работоспособна")
 
                 i+=1
@@ -680,9 +722,9 @@ class NRS_Model(object):
             # QD_2 - QD_1 - невязка модели
             QD_1=abs(Q[1]-Q[0])
             QD_2=abs(Q[2]-Q[1])
-            return self, i, QD_2 - QD_1
+            return self, {'iters':i, 'QD2':QD_2, 'correct':True}
 
-        return self, QD_2 - QD_1
+        return self, QD_2 #- QD_1
 
     def summaryQ(self):
         '''
