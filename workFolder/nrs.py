@@ -345,6 +345,8 @@ class Element(object):
             self.elements_next=[]
             self.elements_previous=[]
 
+        return self
+
     def set_ri(self, new_val):
         '''
         Установка количества входных патрубков.
@@ -357,6 +359,7 @@ class Element(object):
                 pe = self.elements_previous.pop(0)
                 pe.elements_next.remove(self)
                 # self.delElement(pe)
+        return self
 
     def set_ro(self, new_val):
         '''
@@ -370,6 +373,8 @@ class Element(object):
                 ne = self.elements_next.pop(0)
                 ne.elements_previous.remove(self)
                 # self.delElement(ne)
+
+        return self
 
 
     # Прямая установка значений
