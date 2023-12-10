@@ -356,6 +356,7 @@ class Element(object):
             for _ in range(num_to_drop):
                 pe = self.elements_previous.pop(0)
                 pe.elements_next.remove(self)
+                # self.delElement(pe)
 
     def set_ro(self, new_val):
         '''
@@ -366,8 +367,9 @@ class Element(object):
         if self.ro<len(self.elements_next):
             num_to_drop=len(self.elements_next)-self.ro
             for _ in range(num_to_drop):
-                pe = self.elements_next.pop(0)
-                pe.elements_previous.remove(self)
+                ne = self.elements_next.pop(0)
+                ne.elements_previous.remove(self)
+                # self.delElement(ne)
 
 
     # Прямая установка значений
@@ -523,18 +525,57 @@ class NRS_Model(object):
             self.interpretate()
 
         return self
-    
+
     def delElement(self, elmnt:Element):
         '''
         Удаляем элемент как объект
         '''
-        elmnt.drop_links(True)
+        # elmnts_next = elmnt.elements_next
+        # elements_previous = elmnt.elements_previous
+        # elmnt.drop_links(True)
+        # for en in elmnts_next:
+        #     self.fire_dead_elements_try(en)
+        # for ep in elements_previous:
+        #     self.fire_dead_elements_try(ep)
+        elmnt.drop_links(linked_elements=True, current_element=False)
+        for en in elmnt.elements_next:
+            self.fire_dead_elements_try(en)
+        for ep in elmnt.elements_previous:
+            self.fire_dead_elements_try(ep)
+        elmnt.drop_links(linked_elements=False, current_element=True)
+
+
         if elmnt in self.elmnts:
             self.elmnts.remove(elmnt)
         if elmnt in self.elmnts_in:
             self.elmnts_in.remove(elmnt)
         if elmnt in self.elmnts_out:
             self.elmnts_out.remove(elmnt)
+
+
+    def fire_dead_elements_try(self, elmnt: Element):
+        '''
+        Рекурсивная попытка удалить мертвые элементы из модели
+        '''
+        # print('Проверка элемента:', elmnt.name)
+        if elmnt.type==0 and len(elmnt.elements_next)==0:
+            elmnt.drop_links(linked_elements=True, current_element=False)
+            for ep in elmnt.elements_previous:
+                self.fire_dead_elements_try(ep)
+            self.delElement(elmnt)
+        elif elmnt.type==1 and (len(elmnt.elements_next)==0 or len(elmnt.elements_previous)==0):
+            elmnt.drop_links(linked_elements=True, current_element=False)
+            for en in elmnt.elements_next:
+                self.fire_dead_elements_try(en)
+            for ep in elmnt.elements_previous:
+                self.fire_dead_elements_try(ep)
+            self.delElement(elmnt)
+        elif elmnt.type==2 and len(elmnt.elements_previous)==0:
+            elmnt.drop_links(linked_elements=True, current_element=False)
+            for en in elmnt.elements_next:
+                self.fire_dead_elements_try(en)
+            self.delElement(elmnt)
+        return self
 
     def getElement(self, name):
         '''
