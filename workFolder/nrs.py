@@ -376,6 +376,16 @@ class Element(object):
 
         return self
 
+    def add_links(self, elements_previous, elements_next):
+        '''
+        Добавляет ссылки на элементы переданных списков.
+        Важно! Если у элемента недостаточно слотов для подключения, они не подключаются!
+        '''
+        for elmnt_next in elements_next:
+            self.append(elmnt_next)
+        for elmnt_prev in elements_previous:
+            elmnt_prev.append(self)
+        return self
 
     # Прямая установка значений
     def get_h(self):
@@ -531,7 +541,7 @@ class NRS_Model(object):
 
         return self
 
-    def delElement(self, elmnt:Element):
+    def delElement(self, elmnt:Element, fire_dead_elements=True):
         '''
         Удаляем элемент как объект
         '''
@@ -542,12 +552,15 @@ class NRS_Model(object):
         #     self.fire_dead_elements_try(en)
         # for ep in elements_previous:
         #     self.fire_dead_elements_try(ep)
-        elmnt.drop_links(linked_elements=True, current_element=False)
-        for en in elmnt.elements_next:
-            self.fire_dead_elements_try(en)
-        for ep in elmnt.elements_previous:
-            self.fire_dead_elements_try(ep)
-        elmnt.drop_links(linked_elements=False, current_element=True)
+        if fire_dead_elements:
+            elmnt.drop_links(linked_elements=True, current_element=False)
+            for en in elmnt.elements_next:
+                self.fire_dead_elements_try(en)
+            for ep in elmnt.elements_previous:
+                self.fire_dead_elements_try(ep)
+            elmnt.drop_links(linked_elements=False, current_element=True)
+        else:
+            elmnt.drop_links(linked_elements=True, current_element=True)
 
 
         if elmnt in self.elmnts:
