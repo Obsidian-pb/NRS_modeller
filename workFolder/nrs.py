@@ -500,7 +500,7 @@ class NRS_Model(object):
         self.elmnts_in=[]
         self.elmnts_out=[]
         self.counter=0
-        print("Новая модель: " + self.name)
+        # print("Новая модель: " + self.name)
 
     def appendElement(self, elmnt):
         '''
