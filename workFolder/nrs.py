@@ -138,17 +138,18 @@ class NRS_Observer_E(object):
         будет наблюдать и список параметров за которыми он будет наблюдать
             Вход:
                 elmnt: Element. Элемент за которым будет осуществляться наблюдение \n
-                par_list: List. Список параметров за изменением которых будет следить наблдатель
+                par_list: List. Список параметров за изменением которых будет следить наблюдатель
         '''
         self.elmnt=elmnt
         self.set_par(par_list)
+        self.par_dict_init()
         elmnt.observer=self
 
     def set_par(self, par_list):
         '''
-        Устанавливает список параметров за изменением которых будет следить наблдатель
+        Устанавливает список параметров за изменением которых будет следить наблюдатель
             Вход:
-                par_list: List. Список параметров за изменением которых будет следить наблдатель
+                par_list: List. Список параметров за изменением которых будет следить наблюдатель
             Выход:
                 NRS_Observer_E. Ссылка на текущий экземпляр наблюдателя
         '''
@@ -163,7 +164,7 @@ class NRS_Observer_E(object):
             Выход:
                 NRS_Observer_E. Ссылка на текущий экземпляр наблюдателя
         '''
-        self.par_dict={}
+        self.par_dict = {}
         for i in self.par_list:
             self.par_dict[i]=[]
         return self
@@ -213,7 +214,20 @@ class Element(object):
     Класс элемента НРС.
     '''
 
-    def __init__(self, name, e_type, q=3.7, s=0, H_in=0, h=0, H_add=0, z=0, p=1, n=1, l=0, ri=1, ro=1,
+    def __init__(self,
+                 name,
+                 e_type,
+                 q=3.7,
+                 s=0,
+                 H_in=0,
+                 h=0,
+                 H_add=0,
+                 z=0,
+                 p=1,
+                 n=1,
+                 l=0,
+                 ri=1,
+                 ro=1,
                  q_out = q_out_simple):
         '''
         # Аргументы
@@ -421,15 +435,11 @@ class Element(object):
 
     def set_H_add(self, H_add):
         '''
-        Устанавливает дополнительный напор для текущего элемента, 
-        а также далее запускает рекурсивный перерасчет напоров 
-        для всех следующих после текущего элементов
+        Устанавливает дополнительный напор для текущего элемента
             Вход:
                 H_add=float: дополнительный напор, м
         '''
-        self.H_add = H_add
-        # for elmnt in self.elements_next:
-        #     elmnt.set_H_in(self.get_H_out())        
+        self.H_add = H_add      
 
     def get_L(self):
         '''
@@ -442,20 +452,19 @@ class Element(object):
     def set_H_in(self, H_in):
         '''
         Устанавливает напор на входе для текущего элемента, 
-        а так же далее запускает рекурсивный перерасчет напоров 
+        а также далее запускает рекурсивный перерасчет напоров 
         для всех следующих после текущего элементов
             Вход:
                 H_in=float: напор на входе в элемент, м
         '''
         self.H_in = H_in
         for elmnt in self.elements_next:
-            # print(elmnt.name, self.get_H_out())
             elmnt.set_H_in(self.get_H_out())
 
     def set_q_zero(self):
         '''
         Устанавливает нулевой расход для текущего элемента, 
-        а так же далее запускает рекурсивный перерасчет расходов 
+        а также далее запускает рекурсивный перерасчет расходов 
         для всех предыдущих относительно текущего элементов. \n
         Используется для очищения значений расходов при расчете.
         '''
@@ -466,7 +475,7 @@ class Element(object):
     def set_q(self, q):
         '''
         Устанавливает расход для текущего элемента,
-        а так же далее запускает рекурсивный перерасчет расходов 
+        а также далее запускает рекурсивный перерасчет расходов 
         для всех предыдущих относительно текущего элементов.\n
         Для каждого элемента происходит суммирование в том случае,
         если элемент является водосборником \n
@@ -548,13 +557,6 @@ class NRS_Model(object):
         '''
         Удаляем элемент как объект
         '''
-        # elmnts_next = elmnt.elements_next
-        # elements_previous = elmnt.elements_previous
-        # elmnt.drop_links(True)
-        # for en in elmnts_next:
-        #     self.fire_dead_elements_try(en)
-        # for ep in elements_previous:
-        #     self.fire_dead_elements_try(ep)
         if fire_dead_elements:
             elmnt.drop_links(linked_elements=True, current_element=False)
             for en in elmnt.elements_next:
