@@ -46,7 +46,7 @@ class NRS_Revision(object):
     @staticmethod
     def print_element_state(elmnt, e_keys=None):
         '''
-        Печать всех значений параметров elmnt
+        Печать значений всех параметров elmnt
             Вход:
                 `elmnt`: Element 
                     Element. Элемент НРС для которого следует вывести перечень параметров
