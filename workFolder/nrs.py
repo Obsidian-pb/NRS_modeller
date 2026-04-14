@@ -427,7 +427,7 @@ class Element(object):
         self.h = self.s * self.n * self.q**2 
         return self.h
 
-    def get_H_out(self, approved_H=100):
+    def get_H_out(self, approved_H=120):
         '''
         Установка напора на выходе из элемента.
             Выход:
@@ -435,8 +435,12 @@ class Element(object):
                 Равно H_in + h_add - h - z
         '''
         new_H = self.H_in + self.H_add - self.get_h() - self.z
-        if new_H>approved_H:
+        try:
+            if new_H>approved_H:
+                raise ValueError(f"Напор не может быть выше {approved_H}")
+        except TypeError as e:
             raise ValueError(f"Напор не может быть выше {approved_H}")
+
         self.H_out = new_H
         return self.H_out
 
