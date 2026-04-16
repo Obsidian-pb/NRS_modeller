@@ -218,7 +218,18 @@ def q_out_nozzle(elmnt):
         Выход:
             float. Расход л/с
     '''
+    # if elmnt.H_in < 0:
+    #     return elmnt.p*pow(20, 0.5)
     return elmnt.p*pow(elmnt.H_in, 0.5)
+
+def q_out_nozzle_by_s(elmnt):
+    '''
+    Функция расчета расхода на элементе\n
+    Производительность стволов - расход на выходе элемента равен корню из напора на входе деленного на гидравлическое сопротивление.
+        Выход:
+            float. Расход л/с
+    '''
+    return pow(elmnt.H_in / elmnt.s, 0.5)
 
 
 #=======================Класс элемента НРС (узла)===============================
@@ -435,6 +446,7 @@ class Element(object):
                 Равно H_in + h_add - h - z
         '''
         new_H = self.H_in + self.H_add - self.get_h() - self.z
+
         try:
             if new_H>approved_H:
                 raise ValueError(f"Напор не может быть выше {approved_H}")
@@ -776,6 +788,7 @@ class NRS_Model(object):
                 Q[1]=Q[2]
                 Q[2]=self.summaryQ()
 
+
                 QD_1=abs(Q[1]-Q[0])
                 QD_2=abs(Q[2]-Q[1])
 
@@ -807,7 +820,8 @@ class NRS_Model(object):
                 Q[0]=Q[1]
                 Q[1]=Q[2]
                 Q[2]=self.summaryQ()
-                # print('1', Q)
+                # print(Q[2])
+                
                 QD_1=abs(Q[1]-Q[0])
                 QD_2=abs(Q[2]-Q[1])
                 if QD_1<QD_2:
