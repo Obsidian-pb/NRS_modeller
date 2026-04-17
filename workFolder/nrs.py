@@ -804,7 +804,7 @@ class NRS_Model(object):
                 # print('0', Q)
                 for elmnt in self.elmnts_in:
                     elmnt.set_H_in(elmnt.H_in)      
-                    # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
+                #     # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
                 for elmnt in self.elmnts_out:
