@@ -1,6 +1,7 @@
 #%%
 import logging
 from enum import IntEnum
+import warnings
 
 logger = logging.getLogger('NRS')
 
@@ -218,8 +219,6 @@ def q_out_nozzle(elmnt):
         Выход:
             float. Расход л/с
     '''
-    # if elmnt.H_in < 0:
-    #     return elmnt.p*pow(20, 0.5)
     return elmnt.p*pow(elmnt.H_in, 0.5)
 
 def q_out_nozzle_by_s(elmnt):
@@ -447,11 +446,11 @@ class Element(object):
         '''
         new_H = self.H_in + self.H_add - self.get_h() - self.z
 
-        try:
-            if new_H>approved_H:
-                raise ValueError(f"Напор не может быть выше {approved_H}")
-        except TypeError as e:
-            raise ValueError(f"Напор не может быть выше {approved_H}")
+
+        if new_H>approved_H:
+            raise ValueError(f"Напор не может быть выше {approved_H}!")
+        if new_H<0:
+            raise ValueError("Напор не может быть меньше 0!")
 
         self.H_out = new_H
         return self.H_out
@@ -738,10 +737,11 @@ class NRS_Model(object):
         return self
 
     def calc(self,
-             iters=1,
-             callback=None,
-             accuracy=0,
-             fixStates=True):
+            iters     = 1,
+            callback  = None,
+            accuracy  = 0,
+            fixStates = True,
+            step      = 0.5):
         '''
         Рассчитывает модель
             Вход:
@@ -758,6 +758,10 @@ class NRS_Model(object):
                 
                 `fixStates`:Bool=True 
                 фиксировать ли состояния модели при расчете
+
+                `step`:float=0.5
+                шаг изменения расхода при расчете. 
+                Позволяет избежать выхода значений расхода за допустимые пределы при резком изменении напора.
             Выход:
                 `NRS_Model` - ссылка на текущий экземпляр модели\n
                 int - количество итераций потребовавшихся для достижения необходимой точности расчета (при accuracy>0)
@@ -774,8 +778,19 @@ class NRS_Model(object):
                     # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)  elmnt.H_add = self.h + self.H_in
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
+                    # for elmnt_in in elmnt.elements_previous:
+                    #     elmnt_in.set_q_zero()
                 for elmnt in self.elmnts_out:
                     elmnt.set_q(elmnt.get_q_out())
+                    # Попытка уйти от комплексности в отдельных случаях (пока безуспешно)
+                    # new_q = elmnt.get_q_out()
+                    # if abs(elmnt.q - new_q) > step:
+                    #     if elmnt.q - new_q > 0:
+                    #         new_q = elmnt.q - step
+                    #     else:
+                    #         new_q = elmnt.q + step
+                    # elmnt.q = 0 # Обнуляем для того, чтобы дальнейшее суммирование производительностей проводилось корректно
+                    # elmnt.set_q(new_q)
                 if fixStates:
                     self.fixState()
                     # for elmnt in self.elmnts:
@@ -787,6 +802,7 @@ class NRS_Model(object):
                 Q[0]=Q[1]
                 Q[1]=Q[2]
                 Q[2]=self.summaryQ()
+                # Q[2]=sum([elmnt.q for elmnt in self.elmnts_out])
 
 
                 QD_1=abs(Q[1]-Q[0])
@@ -807,8 +823,22 @@ class NRS_Model(object):
                 #     # elmnt.set_H_in(elmnt.H_add + elmnt.H_in)
                 for elmnt in self.elmnts_out:
                     elmnt.set_q_zero()
+                    # for elmnt_in in elmnt.elements_previous:
+                    #     elmnt_in.set_q_zero()
                 for elmnt in self.elmnts_out:
                     elmnt.set_q(elmnt.get_q_out())
+                    # Попытка уйти от комплексности в отдельных случаях (пока безуспешно)
+                    # print('-'*10)
+                    # new_q = elmnt.get_q_out()
+                    # # print(elmnt.q, elmnt.H_in, new_q, elmnt.q - new_q)
+                    # if abs(elmnt.q - new_q) > step:
+                    #     if elmnt.q - new_q > 0:
+                    #         new_q = elmnt.q - step
+                    #     else:
+                    #         new_q = elmnt.q + step
+                    # # print(elmnt.q, new_q)
+                    # elmnt.q = 0 # Обнуляем для того, чтобы дальнейшее суммирование производительностей проводилось корректно
+                    # elmnt.set_q(new_q)
                 if fixStates:
                     self.fixState()
                     # for elmnt in self.elmnts:
@@ -820,6 +850,8 @@ class NRS_Model(object):
                 Q[0]=Q[1]
                 Q[1]=Q[2]
                 Q[2]=self.summaryQ()
+                # Q[2]=sum([elmnt.q for elmnt in self.elmnts_in])
+                # Q[2]=sum([elmnt.q for elmnt in self.elmnts_out])
                 # print(Q[2])
                 
                 QD_1=abs(Q[1]-Q[0])
@@ -827,7 +859,9 @@ class NRS_Model(object):
                 if QD_1<QD_2:
                     # logger.debug("Расчет НРС не возможен")
                     # print('Невязки', Q, QD_1, QD_2)
-                    raise ValueError("НРС с заданными параметрами не работоспособна")
+                    warnings.warn("НРС с заданными параметрами не стабильна!", Warning)
+                    return self, {'iters':i, 'QD2':QD_2, 'correct':True}
+                    # raise ValueError("НРС с заданными параметрами не стабильна")
 
                 i+=1
 
@@ -847,6 +881,7 @@ class NRS_Model(object):
         `float`: суммарный расход модели, л/с
         '''
         return sum([elmnt.get_q_out() for elmnt in self.elmnts_out])
+        # return sum([elmnt.q for elmnt in self.elmnts_out])
     
     def drop_q(self):
         '''
